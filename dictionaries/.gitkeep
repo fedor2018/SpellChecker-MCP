@@ -1,0 +1,2 @@
+# This file ensures the dictionaries directory is tracked by git
+# Dictionary files (.dic and .aff) are downloaded during installation

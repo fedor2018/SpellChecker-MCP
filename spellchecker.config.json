@@ -1,0 +1,23 @@
+{
+  "languages": ["en-US", "es", "fr"],
+  "defaultLanguage": "en-US",
+  "scanOptions": {
+    "syntaxAware": true,
+    "recursive": true,
+    "fileTypes": [
+      ".txt", ".md", ".mdx",
+      ".js", ".jsx", ".ts", ".tsx",
+      ".py", ".java", ".go",
+      ".html", ".css", ".scss"
+    ],
+    "ignorePaths": [
+      "node_modules",
+      ".git",
+      "dist",
+      "build",
+      "coverage",
+      ".next",
+      "vendor"
+    ]
+  }
+}

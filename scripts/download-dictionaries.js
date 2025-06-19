@@ -8,28 +8,20 @@ import fetch from 'node-fetch';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DICTIONARY_SOURCES = {
-  'en-US': {
-    dic: 'https://raw.githubusercontent.com/wooorm/dictionaries/main/dictionaries/en/index.dic',
-    aff: 'https://raw.githubusercontent.com/wooorm/dictionaries/main/dictionaries/en/index.aff'
-  },
-  'es': {
-    dic: 'https://raw.githubusercontent.com/wooorm/dictionaries/main/dictionaries/es/index.dic',
-    aff: 'https://raw.githubusercontent.com/wooorm/dictionaries/main/dictionaries/es/index.aff'
-  },
-  'fr': {
-    dic: 'https://raw.githubusercontent.com/wooorm/dictionaries/main/dictionaries/fr/index.dic',
-    aff: 'https://raw.githubusercontent.com/wooorm/dictionaries/main/dictionaries/fr/index.aff'
-  },
-  'de': {
-    dic: 'https://raw.githubusercontent.com/wooorm/dictionaries/main/dictionaries/de/index.dic',
-    aff: 'https://raw.githubusercontent.com/wooorm/dictionaries/main/dictionaries/de/index.aff'
-  },
-  'pt': {
-    dic: 'https://raw.githubusercontent.com/wooorm/dictionaries/main/dictionaries/pt/index.dic',
-    aff: 'https://raw.githubusercontent.com/wooorm/dictionaries/main/dictionaries/pt/index.aff'
+// Import the language configuration
+async function loadLanguageConfig() {
+  try {
+    const configModule = await import('../dist/config.js');
+    return configModule.AVAILABLE_LANGUAGES;
+  } catch (error) {
+    // Fallback to basic config if dist doesn't exist
+    return [
+      { code: 'en-US', name: 'English (US)', enabled: true },
+      { code: 'es', name: 'Spanish', enabled: false },
+      { code: 'fr', name: 'French', enabled: false }
+    ];
   }
-};
+}
 
 async function downloadFile(url, filepath) {
   try {
@@ -46,24 +38,47 @@ async function downloadFile(url, filepath) {
   }
 }
 
-async function downloadDictionaries() {
+async function downloadDictionaries(languagesToDownload = null) {
   const dictDir = path.join(__dirname, '..', 'dictionaries');
   
   // Create dictionaries directory if it doesn't exist
   await fs.mkdir(dictDir, { recursive: true });
   
-  console.log('Downloading dictionaries...');
+  // Load language configuration
+  const availableLanguages = await loadLanguageConfig();
   
-  for (const [lang, sources] of Object.entries(DICTIONARY_SOURCES)) {
-    console.log(`\nDownloading ${lang} dictionary...`);
+  // Determine which languages to download
+  let languages;
+  if (languagesToDownload) {
+    // Download specific languages from command line args
+    const requestedCodes = languagesToDownload.split(',').map(s => s.trim());
+    languages = availableLanguages.filter(lang => requestedCodes.includes(lang.code));
+  } else if (process.env.SPELLCHECKER_LANGUAGES) {
+    // Download languages from environment variable
+    const envCodes = process.env.SPELLCHECKER_LANGUAGES.split(',').map(s => s.trim());
+    languages = availableLanguages.filter(lang => envCodes.includes(lang.code));
+  } else {
+    // Download only enabled languages
+    languages = availableLanguages.filter(lang => lang.enabled);
+  }
+  
+  console.log(`Downloading dictionaries for: ${languages.map(l => l.code).join(', ')}`);
+  
+  for (const lang of languages) {
+    console.log(`\nDownloading ${lang.name} (${lang.code}) dictionary...`);
+    
+    if (!lang.dictionaryUrl) {
+      console.error(`No dictionary URL configured for ${lang.code}`);
+      continue;
+    }
     
     try {
       await Promise.all([
-        downloadFile(sources.dic, path.join(dictDir, `${lang}.dic`)),
-        downloadFile(sources.aff, path.join(dictDir, `${lang}.aff`))
+        downloadFile(lang.dictionaryUrl.dic, path.join(dictDir, `${lang.code}.dic`)),
+        downloadFile(lang.dictionaryUrl.aff, path.join(dictDir, `${lang.code}.aff`))
       ]);
     } catch (error) {
-      console.error(`Failed to download ${lang} dictionary:`, error.message);
+      console.error(`Failed to download ${lang.code} dictionary:`, error.message);
       // Continue with other dictionaries even if one fails
     }
   }
@@ -73,7 +88,12 @@ async function downloadDictionaries() {
 
 // Run the download if this script is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  downloadDictionaries().catch(console.error);
+  // Check for command line arguments
+  const args = process.argv.slice(2);
+  const languageArg = args.find(arg => arg.startsWith('--languages='));
+  const languages = languageArg ? languageArg.split('=')[1] : null;
+  
+  downloadDictionaries(languages).catch(console.error);
 }
 
 export { downloadDictionaries };

@@ -1,13 +1,16 @@
 # SpellChecker MCP Server
 
-A fast, multilingual Model Context Protocol (MCP) server that provides spell-checking capabilities to Large Language Models. This server enables LLMs to check spelling, get suggestions, and manage custom dictionaries across multiple languages.
+A fast, multilingual Model Context Protocol (MCP) server that provides spell-checking capabilities to Large Language Models. This server enables LLMs to check spelling in text, files, and entire projects with syntax-aware parsing for code files.
 
 ## Features
 
-- **Multi-language support**: English (US), Spanish, French, German, and Portuguese
+- **Multi-language support**: 15+ languages including English, Spanish, French, German, Portuguese, Italian, Dutch, Polish, Russian, Ukrainian, Swedish, Danish, and Norwegian
+- **Syntax-aware checking**: Intelligently checks only comments, strings, and documentation in code files
+- **File and folder scanning**: Check individual files or entire project directories
+- **Modular language activation**: Enable only the languages you need
 - **Fast spell checking**: Powered by nspell for efficient processing
 - **Custom dictionary management**: Add words to personal dictionaries
-- **Line and column tracking**: Optional position information for misspellings
+- **Smart code parsing**: Understands HTML, JavaScript, TypeScript, Python, and more
 - **MCP-compliant**: Works with any MCP-compatible client
 
 ## Installation
@@ -40,11 +43,30 @@ Add the server to your Claude Desktop configuration file:
   "mcpServers": {
     "spellchecker": {
       "command": "node",
-      "args": ["/path/to/spellchecker-mcp-server/dist/index.js"]
+      "args": ["/path/to/spellchecker-mcp-server/dist/index.js"],
+      "env": {
+        "SPELLCHECKER_LANGUAGES": "en-US,es,fr"
+      }
     }
   }
 }
 ```
+
+### Configuring Languages
+
+You can configure which languages to enable in three ways:
+
+1. **Environment variable** (recommended for Claude Desktop):
+   ```bash
+   SPELLCHECKER_LANGUAGES="en-US,es,fr" node dist/index.js
+   ```
+
+2. **Configuration file**:
+   ```bash
+   SPELLCHECKER_CONFIG="/path/to/spellchecker.config.json" node dist/index.js
+   ```
+
+3. **Edit the default in `src/config.ts`** before building
 
 ### Using with Other MCP Clients
 
@@ -98,13 +120,81 @@ Adds a word to the personal dictionary for a language.
 ### `list_languages`
 Lists all available languages for spell checking.
 
+### `check_file`
+Checks spelling in a single file with syntax-aware parsing.
+
+**Parameters:**
+- `filePath` (required): Path to the file to check
+- `language` (optional): Language code (default: "en-US")
+- `syntaxAware` (optional): Enable syntax-aware parsing (default: true)
+
+**Example:**
+```json
+{
+  "filePath": "/path/to/app.tsx",
+  "language": "en-US",
+  "syntaxAware": true
+}
+```
+
+### `check_folder`
+Checks spelling in all files within a folder.
+
+**Parameters:**
+- `folderPath` (required): Path to the folder to check
+- `language` (optional): Language code (default: "en-US")
+- `recursive` (optional): Check subfolders (default: true)
+- `fileTypes` (optional): Array of file extensions to check
+- `syntaxAware` (optional): Enable syntax-aware parsing (default: true)
+
+**Example:**
+```json
+{
+  "folderPath": "/path/to/project",
+  "language": "en-US",
+  "recursive": true,
+  "fileTypes": [".js", ".tsx", ".md"],
+  "syntaxAware": true
+}
+```
+
 ## Supported Languages
 
+The server supports 15+ languages. Enable only what you need:
+
 - `en-US` - English (United States)
+- `en-GB` - English (United Kingdom)
 - `es` - Spanish
 - `fr` - French
 - `de` - German
 - `pt` - Portuguese
+- `pt-BR` - Portuguese (Brazil)
+- `it` - Italian
+- `nl` - Dutch
+- `pl` - Polish
+- `ru` - Russian
+- `uk` - Ukrainian
+- `sv` - Swedish
+- `da` - Danish
+- `nb` - Norwegian Bokmål
+
+## Syntax-Aware Features
+
+When `syntaxAware` is enabled, the spell checker intelligently parses:
+
+- **Comments**: Single-line and multi-line comments in all major languages
+- **String literals**: Only checks strings that look like human-readable text
+- **JSX/TSX content**: Text between JSX tags
+- **Documentation**: Docstrings, JSDoc comments, etc.
+- **Markdown**: Ignores code blocks and inline code
+- **HTML/XML**: Checks text content and comments
+
+The checker automatically ignores:
+- Variable names and identifiers
+- Programming keywords
+- URLs and file paths
+- Hex colors and numbers
+- Code within backticks in Markdown
 
 ## Development
 
@@ -150,8 +240,35 @@ just dictionaries
 The server uses:
 - **@modelcontextprotocol/sdk**: MCP protocol implementation
 - **nspell**: Hunspell-compatible spell checker
+- **glob**: File pattern matching for directory scanning
 - **TypeScript**: Type-safe development
 - **Dictionary files**: From the wooorm/dictionaries project
+
+## Configuration File
+
+Create a `spellchecker.config.json` file:
+
+```json
+{
+  "languages": ["en-US", "es", "fr"],
+  "defaultLanguage": "en-US",
+  "scanOptions": {
+    "syntaxAware": true,
+    "recursive": true,
+    "fileTypes": [
+      ".txt", ".md", ".mdx",
+      ".js", ".jsx", ".ts", ".tsx",
+      ".py", ".java", ".go"
+    ],
+    "ignorePaths": [
+      "node_modules",
+      ".git",
+      "dist",
+      "build"
+    ]
+  }
+}
+```
 
 ## Contributing
 

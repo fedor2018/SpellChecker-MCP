@@ -11,6 +11,8 @@ import nspell from 'nspell';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { getEnabledLanguages, LanguageConfig } from './config.js';
+import { FileScanner, ScanOptions } from './fileScanner.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,13 +59,9 @@ class SpellCheckerServer {
 
   private async initializeSpellChecker() {
     const dictDir = path.join(__dirname, '../dictionaries');
-    const languages = [
-      { code: 'en-US', name: 'English (US)' },
-      { code: 'es', name: 'Spanish' },
-      { code: 'fr', name: 'French' },
-      { code: 'de', name: 'German' },
-      { code: 'pt', name: 'Portuguese' }
-    ];
+    const languages = getEnabledLanguages();
+    
+    console.error(`Initializing spell checkers for ${languages.length} language(s)...`);
 
     for (const lang of languages) {
       try {
@@ -190,6 +188,64 @@ class SpellCheckerServer {
             properties: {},
           },
         } as Tool,
+        {
+          name: 'check_file',
+          description: 'Check spelling in a file with syntax-aware parsing',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              filePath: {
+                type: 'string',
+                description: 'Path to the file to check',
+              },
+              language: {
+                type: 'string',
+                description: 'Language code for spell checking',
+                default: 'en-US',
+              },
+              syntaxAware: {
+                type: 'boolean',
+                description: 'Enable syntax-aware parsing for code files',
+                default: true,
+              },
+            },
+            required: ['filePath'],
+          },
+        } as Tool,
+        {
+          name: 'check_folder',
+          description: 'Check spelling in all files in a folder',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              folderPath: {
+                type: 'string',
+                description: 'Path to the folder to check',
+              },
+              language: {
+                type: 'string',
+                description: 'Language code for spell checking',
+                default: 'en-US',
+              },
+              recursive: {
+                type: 'boolean',
+                description: 'Check files recursively in subfolders',
+                default: true,
+              },
+              fileTypes: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'File extensions to check (e.g., [".js", ".md"])',
+              },
+              syntaxAware: {
+                type: 'boolean',
+                description: 'Enable syntax-aware parsing for code files',
+                default: true,
+              },
+            },
+            required: ['folderPath'],
+          },
+        } as Tool,
       ],
     }));
 
@@ -209,6 +265,10 @@ class SpellCheckerServer {
           return this.getSuggestions(request.params.arguments);
         case 'list_languages':
           return this.listLanguages();
+        case 'check_file':
+          return this.checkFile(request.params.arguments);
+        case 'check_folder':
+          return this.checkFolder(request.params.arguments);
         default:
           throw new Error(`Unknown tool: ${request.params.name}`);
       }
@@ -324,6 +384,75 @@ class SpellCheckerServer {
         },
       ],
     };
+  }
+
+  private async checkFile(args: any) {
+    const { filePath, language = this.defaultLanguage, syntaxAware = true } = args;
+    const spellChecker = this.getSpellChecker(language);
+    const scanner = new FileScanner(spellChecker);
+    
+    try {
+      const results = await scanner.scanPath(filePath, { syntaxAware });
+      const result = results[0];
+      
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              file: result.file,
+              fileType: result.language,
+              misspellings: result.misspellings,
+              total: result.misspellings.length
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      throw new Error(`Failed to check file: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async checkFolder(args: any) {
+    const { 
+      folderPath, 
+      language = this.defaultLanguage, 
+      recursive = true, 
+      fileTypes,
+      syntaxAware = true 
+    } = args;
+    
+    const spellChecker = this.getSpellChecker(language);
+    const scanner = new FileScanner(spellChecker);
+    
+    try {
+      const results = await scanner.scanPath(folderPath, {
+        recursive,
+        fileTypes,
+        syntaxAware
+      });
+      
+      const summary = {
+        totalFiles: results.length,
+        totalMisspellings: results.reduce((sum, r) => sum + r.misspellings.length, 0),
+        files: results.map(r => ({
+          file: path.relative(folderPath, r.file),
+          fileType: r.language,
+          misspellings: r.misspellings.length
+        }))
+      };
+      
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(summary, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      throw new Error(`Failed to check folder: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   async run() {
