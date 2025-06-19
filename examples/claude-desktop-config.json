@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "spellchecker": {
+      "command": "node",
+      "args": ["/absolute/path/to/spellchecker-mcp-server/dist/index.js"]
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "examples": [
+    {
+      "description": "Check spelling with line numbers",
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "name": "check_spelling",
+          "arguments": {
+            "text": "This is a tset of the speling checker.\nIt can handel multiple lines of text.",
+            "language": "en-US",
+            "includeLineNumbers": true
+          }
+        },
+        "id": 1
+      }
+    },
+    {
+      "description": "Check if a word is correct",
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "name": "is_correct",
+          "arguments": {
+            "word": "hello",
+            "language": "en-US"
+          }
+        },
+        "id": 2
+      }
+    },
+    {
+      "description": "Get spelling suggestions",
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "name": "get_suggestions",
+          "arguments": {
+            "word": "speling",
+            "language": "en-US",
+            "limit": 3
+          }
+        },
+        "id": 3
+      }
+    },
+    {
+      "description": "Add word to dictionary",
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "name": "add_to_dictionary",
+          "arguments": {
+            "word": "blockchain",
+            "language": "en-US"
+          }
+        },
+        "id": 4
+      }
+    },
+    {
+      "description": "List available languages",
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "name": "list_languages",
+          "arguments": {}
+        },
+        "id": 5
+      }
+    },
+    {
+      "description": "Check Spanish text",
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "tools/call",
+        "params": {
+          "name": "check_spelling",
+          "arguments": {
+            "text": "Hola mundo, esto es una prueva del corrector ortográfico",
+            "language": "es"
+          }
+        },
+        "id": 6
+      }
+    }
+  ]
+}

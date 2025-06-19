@@ -1,0 +1,58 @@
+{
+  "name": "spellchecker-mcp-server",
+  "version": "0.1.0",
+  "description": "A fast, multilingual Model Context Protocol (MCP) server for spell checking",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "spellchecker-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "postinstall": "node scripts/download-dictionaries.js",
+    "prepublishOnly": "yarn build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "llm",
+    "spellcheck",
+    "spelling",
+    "spell-checker",
+    "language-tools",
+    "multilingual"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/spellchecker-mcp-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/spellchecker-mcp-server/issues"
+  },
+  "homepage": "https://github.com/yourusername/spellchecker-mcp-server#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "node-fetch": "^3.3.2",
+    "nspell": "^2.1.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  },
+  "files": [
+    "dist/**/*",
+    "dictionaries/**/*",
+    "scripts/**/*"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
