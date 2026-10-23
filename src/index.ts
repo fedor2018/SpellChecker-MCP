@@ -54,8 +54,10 @@ class SpellCheckerServer {
     );
 
     this.setupHandlers();
-    this.initializeSpellChecker();
+    this.initPromise = this.initializeSpellChecker();
   }
+
+  private initPromise: Promise<void>;
 
   private async initializeSpellChecker() {
     const dictDir = path.join(__dirname, '../dictionaries');
@@ -456,6 +458,7 @@ class SpellCheckerServer {
   }
 
   async run() {
+    await this.initPromise;
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     console.error('SpellChecker MCP server running on stdio');
