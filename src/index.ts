@@ -61,36 +61,51 @@ class SpellCheckerServer {
 
   private async initializeSpellChecker() {
     const dictDir = path.join(__dirname, '../dictionaries');
-    const languages = getEnabledLanguages();
-    
-    console.error(`Initializing spell checkers for ${languages.length} language(s)...`);
+    // Lazy-loading: only the default language is loaded at startup. Other
+    // enabled languages are pulled in on first use via ensureLanguage(),
+    // keeping the initial V8 heap small (OOM was seen at ~407 MB when all
+    // dictionaries were loaded up front).
+    await this.ensureLanguage(this.defaultLanguage, dictDir);
+  }
 
-    for (const lang of languages) {
-      try {
-        const dicPath = path.join(dictDir, `${lang.code}.dic`);
-        const affPath = path.join(dictDir, `${lang.code}.aff`);
-        
-        const [dicBuffer, affBuffer] = await Promise.all([
-          fs.readFile(dicPath),
-          fs.readFile(affPath),
-        ]);
-
-        const checker = nspell(affBuffer, dicBuffer);
-        this.spellCheckers.set(lang.code, {
-          checker,
-          code: lang.code,
-          name: lang.name
-        });
-        
-        console.error(`Loaded ${lang.name} dictionary`);
-      } catch (error) {
-        console.error(`Failed to load ${lang.name} dictionary:`, error instanceof Error ? error.message : String(error));
-      }
+  private async ensureLanguage(language: string, dictDir?: string): Promise<void> {
+    if (this.spellCheckers.has(language)) {
+      return;
     }
-
-    if (this.spellCheckers.size === 0) {
-      console.error('No dictionaries loaded. Please run: npm run postinstall');
+    const dir = dictDir ?? path.join(__dirname, '../dictionaries');
+    const langs = getEnabledLanguages();
+    const langCfg = langs.find((l) => l.code === language);
+    if (!langCfg) {
+      return; // unknown language — getSpellChecker will report it later
     }
+    try {
+      const dicPath = path.join(dir, `${language}.dic`);
+      const affPath = path.join(dir, `${language}.aff`);
+      const [dicBuffer, affBuffer] = await Promise.all([
+        fs.readFile(dicPath),
+        fs.readFile(affPath),
+      ]);
+      const checker = nspell(affBuffer, dicBuffer);
+      this.spellCheckers.set(language, {
+        checker,
+        code: language,
+        name: langCfg.name,
+      });
+      console.error(`Loaded ${langCfg.name} dictionary`);
+    } catch (error) {
+      console.error(`Failed to load ${language} dictionary:`, error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  private async getSpellChecker(language: string): Promise<any> {
+    if (!this.spellCheckers.has(language)) {
+      await this.ensureLanguage(language);
+    }
+    const langChecker = this.spellCheckers.get(language);
+    if (!langChecker) {
+      throw new Error(`Language '${language}' not available. Use list_languages to see available options.`);
+    }
+    return langChecker.checker;
   }
 
   private setupHandlers() {

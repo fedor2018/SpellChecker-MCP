@@ -1,5 +1,5 @@
 {
-  "languages": ["en-US", "es", "fr"],
+  "languages": ["en-US"],
   "defaultLanguage": "en-US",
   "scanOptions": {
     "syntaxAware": true,
